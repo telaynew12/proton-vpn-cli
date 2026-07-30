@@ -47,17 +47,19 @@ export async function startGluetun(
     "VPN_SERVICE_PROVIDER=custom",
   ];
 
+  // xkuma/socks5 always listens on 1080 inside the container, so we publish
+  // the host's chosen port to container port 1080.
   await docker.createContainer({
     Image: GLUETUN_IMAGE,
     name: GLUETUN_CONTAINER,
     Env: env,
-    ExposedPorts: { [`${port}/tcp`]: {} },
+    ExposedPorts: { "1080/tcp": {} },
     HostConfig: {
       Binds: binds,
       CapAdd: ["NET_ADMIN"],
       Devices: [{ PathOnContainer: "/dev/net/tun", PathInContainer: "/dev/net/tun", CgroupPermissions: "rwm" }],
       NetworkMode: "bridge",
-      PortBindings: { [`${port}/tcp`]: [{ HostPort: String(port) }] },
+      PortBindings: { "1080/tcp": [{ HostPort: String(port) }] },
       RestartPolicy: { Name: "unless-stopped" },
     },
   });
@@ -66,13 +68,14 @@ export async function startGluetun(
   await container.start();
 }
 
-export async function startSocks5(port: number): Promise<void> {
+export async function startSocks5(): Promise<void> {
   await removeContainer(SOCKS5_CONTAINER);
 
+  // xkuma/socks5 hardcodes its listen port to 1080; the Gluetun container
+  // already forwards the user's chosen host port to 1080 on the shared netns.
   await docker.createContainer({
     Image: SOCKS5_IMAGE,
     name: SOCKS5_CONTAINER,
-    Env: [`SOCKS_PORT=${port}`],
     HostConfig: {
       NetworkMode: `container:${GLUETUN_CONTAINER}`,
       RestartPolicy: { Name: "unless-stopped" },

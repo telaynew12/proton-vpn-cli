@@ -16,6 +16,10 @@ export default async function connect(): Promise<void> {
 
   fmt.info("Starting connection...");
 
+  const spinner = ora("Removing existing containers").start();
+  await docker.removeContainers();
+  spinner.succeed("Removed existing containers");
+
   const portSpinner = ora("Checking port availability").start();
   const portAvailable = await system.checkPortAvailable(config.port);
   if (!portAvailable) {
@@ -23,10 +27,6 @@ export default async function connect(): Promise<void> {
     throw new Error(`Port ${config.port} is already in use`);
   }
   portSpinner.succeed(`Port ${config.port} is available`);
-
-  const spinner = ora("Removing existing containers").start();
-  await docker.removeContainers();
-  spinner.succeed("Removed existing containers");
 
   const pullSpinner = ora("Pulling Docker images").start();
   await docker.pullImage(GLUETUN_IMAGE);
@@ -53,7 +53,7 @@ export default async function connect(): Promise<void> {
 
   const socksSpinner = ora("Starting SOCKS5 proxy").start();
   try {
-    await docker.startSocks5(config.port);
+    await docker.startSocks5();
     socksSpinner.succeed(`SOCKS5 proxy started on localhost:${config.port}`);
   } catch (err: any) {
     socksSpinner.fail(`Failed to start SOCKS5: ${err.message}`);
