@@ -1,0 +1,45 @@
+{
+  "name": "proton-local-vpn",
+  "version": "1.0.0",
+  "description": "Local SOCKS5 proxy CLI using Docker, Gluetun, and ProtonVPN",
+  "main": "dist/index.js",
+  "bin": {
+    "proton-local-vpn": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "test": "echo \"No tests configured\""
+  },
+  "keywords": [
+    "vpn",
+    "protonvpn",
+    "socks5",
+    "proxy",
+    "docker",
+    "gluetun"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.19.0",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3",
+    "dockerode": "^5.0.1",
+    "execa": "^9.6.1",
+    "fs-extra": "^11.4.0",
+    "inquirer": "^14.0.2",
+    "keytar": "^7.9.0",
+    "ora": "^9.4.1"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^4.0.1",
+    "@types/fs-extra": "^11.0.4",
+    "@types/inquirer": "^9.0.10",
+    "@types/node": "^26.1.2",
+    "pkg": "^5.8.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^7.0.2"
+  }
+}
