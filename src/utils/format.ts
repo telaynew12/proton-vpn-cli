@@ -5,11 +5,12 @@ export const error = (msg: string) => console.log(chalk.red("✗") + " " + msg);
 export const info = (msg: string) => console.log(chalk.blue("ℹ") + " " + msg);
 export const warn = (msg: string) => console.log(chalk.yellow("⚠") + " " + msg);
 
-export function formatIp(ip?: string): string {
-  return ip ? ip.replace(/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/, (m) => {
+export function formatIp(ip?: string): string | undefined {
+  if (!ip) return undefined;
+  return ip.replace(/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/, (m) => {
     const parts = m.split(".");
     return parts.map((p, i) => (i === 0 ? p : "xxx")).join(".");
-  }) : "Unknown";
+  });
 }
 
 export function maskSensitive(value: string): string {
