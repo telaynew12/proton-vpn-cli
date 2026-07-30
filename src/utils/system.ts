@@ -65,17 +65,15 @@ export async function getPublicIp(socks5Host?: string): Promise<string | undefin
 }
 
 export async function checkPortAvailable(port: number): Promise<boolean> {
-  try {
-    const { stdout } = await execa("ss", ["-tlnp", `sport = :${port}`], { timeout: 3000 });
-    return !stdout.includes(String(port));
-  } catch {
-    try {
-      const { stdout } = await execa("netstat", ["-tlnp"], { timeout: 3000 });
-      return !stdout.includes(`:${port}`);
-    } catch {
-      return true;
-    }
-  }
+  const { default: net } = await import("net");
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once("error", () => resolve(false));
+    server.once("listening", () => {
+      server.close(() => resolve(true));
+    });
+    server.listen(port, "127.0.0.1");
+  });
 }
 
 export async function searchOpenVpnProfiles(): Promise<string[]> {
@@ -98,6 +96,5 @@ export async function searchOpenVpnProfiles(): Promise<string[]> {
 
 export async function installDocker(): Promise<void> {
   const installCmd = `curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh`;
-  const { stdout } = await execa("sh", ["-c", installCmd], { timeout: 120000 });
-  return stdout as any;
+  await execa("sh", ["-c", installCmd], { timeout: 120000 });
 }

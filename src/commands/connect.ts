@@ -2,6 +2,7 @@ import ora from "ora";
 import chalk from "chalk";
 import { requireConfig, getPassword } from "../config";
 import * as docker from "../docker";
+import { GLUETUN_IMAGE, SOCKS5_IMAGE } from "../constants";
 import * as system from "../utils/system";
 import * as fmt from "../utils/format";
 import { getCountryForIp } from "../utils/lookup";
@@ -15,18 +16,26 @@ export default async function connect(): Promise<void> {
 
   fmt.info("Starting connection...");
 
+  const portSpinner = ora("Checking port availability").start();
+  const portAvailable = await system.checkPortAvailable(config.port);
+  if (!portAvailable) {
+    portSpinner.fail(`Port ${config.port} is already in use.`);
+    throw new Error(`Port ${config.port} is already in use`);
+  }
+  portSpinner.succeed(`Port ${config.port} is available`);
+
   const spinner = ora("Removing existing containers").start();
   await docker.removeContainers();
   spinner.succeed("Removed existing containers");
 
   const pullSpinner = ora("Pulling Docker images").start();
-  await docker.pullImage(docker.GLUETUN_IMAGE);
-  await docker.pullImage(docker.SOCKS5_IMAGE);
+  await docker.pullImage(GLUETUN_IMAGE);
+  await docker.pullImage(SOCKS5_IMAGE);
   pullSpinner.succeed("Docker images ready");
 
   const gluetunSpinner = ora("Starting Gluetun container").start();
   try {
-    await docker.startGluetun(config.ovpn, config.username, password);
+    await docker.startGluetun(config.ovpn, config.username, password, config.port);
     gluetunSpinner.succeed("Gluetun container started");
   } catch (err: any) {
     gluetunSpinner.fail(`Failed to start Gluetun: ${err.message}`);
@@ -70,6 +79,6 @@ export default async function connect(): Promise<void> {
 
   console.log(chalk.green.bold("\nConnected\n"));
   console.log(`${chalk.gray("Country:")}    ${country || "Unknown"}`);
-  console.log(`${chalk.gray("Public IP:")}  ${publicIp}`);
+  console.log(`${chalk.gray("Public IP:")}  ${fmt.formatIp(publicIp)}`);
   console.log(`${chalk.gray("SOCKS5:")}    ${socks5Host}`);
 }

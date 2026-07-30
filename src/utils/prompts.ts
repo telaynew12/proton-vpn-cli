@@ -1,5 +1,3 @@
-import type { QuestionCollection } from "inquirer";
-
 let inquirer: any;
 
 async function getInquirer(): Promise<any> {
@@ -12,14 +10,13 @@ async function getInquirer(): Promise<any> {
 
 export async function promptInput(message: string, defaultValue?: string, mask?: boolean): Promise<string> {
   const iq = await getInquirer();
-  const questions: QuestionCollection = {
+  const answer = await iq.prompt({
     type: "input",
     name: "value",
     message,
     default: defaultValue,
     mask,
-  };
-  const answer = await iq.prompt(questions);
+  });
   return answer.value as string;
 }
 

@@ -31,15 +31,17 @@ export async function removeContainers(): Promise<void> {
 export async function startGluetun(
   ovpnPath: string,
   username: string,
-  password: string
+  password: string,
+  port: number
 ): Promise<void> {
   await removeContainer(GLUETUN_CONTAINER);
 
   const absPath = path.resolve(ovpnPath);
-  const binds = [`${path.dirname(absPath)}:/gluetun/config:ro`];
+  const binds = [`${absPath}:/gluetun/config/config.ovpn:ro`];
   const env = [
     `OPENVPN_USER=${username}`,
     `OPENVPN_PASSWORD=${password}`,
+    `OPENVPN_CUSTOM_CONFIG=/gluetun/config/config.ovpn`,
     `OPENVPN_MSSFIX=1300`,
     `FIREWALL_OUTBOUND_SUBNETS=172.17.0.0/16`,
     "VPN_SERVICE_PROVIDER=custom",
@@ -49,11 +51,13 @@ export async function startGluetun(
     Image: GLUETUN_IMAGE,
     name: GLUETUN_CONTAINER,
     Env: env,
+    ExposedPorts: { [`${port}/tcp`]: {} },
     HostConfig: {
       Binds: binds,
       CapAdd: ["NET_ADMIN"],
       Devices: [{ PathOnContainer: "/dev/net/tun", PathInContainer: "/dev/net/tun", CgroupPermissions: "rwm" }],
       NetworkMode: "bridge",
+      PortBindings: { [`${port}/tcp`]: [{ HostPort: String(port) }] },
       RestartPolicy: { Name: "unless-stopped" },
     },
   });
@@ -68,10 +72,8 @@ export async function startSocks5(port: number): Promise<void> {
   await docker.createContainer({
     Image: SOCKS5_IMAGE,
     name: SOCKS5_CONTAINER,
-    Env: [`PROXY_PORT=${port}`],
-    ExposedPorts: { [`${port}/tcp`]: {} },
+    Env: [`SOCKS_PORT=${port}`],
     HostConfig: {
-      PortBindings: { [`${port}/tcp`]: [{ HostPort: String(port) }] },
       NetworkMode: `container:${GLUETUN_CONTAINER}`,
       RestartPolicy: { Name: "unless-stopped" },
     },
@@ -104,7 +106,18 @@ export async function waitForGluetun(timeout = 120000): Promise<void> {
 }
 
 export async function followLogs(): Promise<void> {
-  await execa("docker", ["logs", "-f", GLUETUN_CONTAINER], { stdio: "inherit", timeout: 0 });
+  const { spawn } = await import("child_process");
+  return new Promise((resolve, reject) => {
+    const child = spawn("docker", ["logs", "-f", GLUETUN_CONTAINER], { stdio: "inherit" });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0 || code === null) {
+        resolve();
+      } else {
+        reject(new Error(`docker logs exited with code ${code}`));
+      }
+    });
+  });
 }
 
 export async function listRunningContainers(): Promise<string[]> {
